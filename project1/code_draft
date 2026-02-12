@@ -1,0 +1,86 @@
+mport streamlit as st
+import google.generativeai as genai
+import urllib.parse
+import os
+
+# ---------------------------------------------------------
+# 1. API CONFIGURATION
+# ---------------------------------------------------------
+os.environ["GOOGLE_API_KEY"] = "my_api_key"
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+
+MODEL_ID = 'gemini-2.0-flash'
+model = genai.GenerativeModel(MODEL_ID)
+active_model_name = MODEL_ID
+
+# ---------------------------------------------------------
+# 2. UI DESIGN
+# ---------------------------------------------------------
+st.set_page_config(page_title="Intelligent AI Chef", page_icon="👨‍🍳")
+st.title("👨‍🍳 Intelligent AI Chef")
+
+if active_model_name:
+    st.success(f"Connected to Model: {active_model_name}")
+else:
+    st.error("API Connection Failed. Please check your API Key or Network.")
+
+# User Inputs
+st.sidebar.header("📍 Kitchen Environment")
+ingredients = st.sidebar.text_area("🛒 Available Ingredients", "Eggs, Onion, Kimchi, Rice")
+cooking_time = st.sidebar.select_slider("⏱ Max Time (min)", options=[5, 10, 15, 20, 30, 45, 60], value=15)
+tools = st.sidebar.multiselect("🍳 Available Tools", 
+                              ["Frying Pan", "Pot", "Microwave", "Air Fryer", "Oven"], 
+                              default=["Frying Pan"])
+
+# ---------------------------------------------------------
+# 3. CORE PROMPT (CoT + Analogical + ReAct)
+# ---------------------------------------------------------
+prompt_template = f"""
+You are an AI Chef trained in logical reasoning. Create a recipe by following these 3 patterns:
+
+[Pattern 1: Analogical Prompting]
+- Based on the user's constraints (Time: {cooking_time}m, Tools: {tools}), identify a similar successful cooking style (e.g., "Minimalist dorm-style cooking").
+- Explain the core efficiency principle of this style.
+
+[Pattern 2: Chain-of-Thought (CoT)]
+- Analyze the ingredients: {ingredients}.
+- Reason step-by-step: How to prep and cook them logically to finish within {cooking_time} minutes using only {tools}.
+- Predict one potential mistake and provide a logical fix.
+
+[Pattern 3: ReAct (Reasoning + Acting)]
+- Thought: Based on the logic, recommend the best menu.
+- Action: Generate a specific YouTube search query to verify the recipe. Format it as [YouTube Query: Search Keyword]
+
+---
+[Output Requirements]
+- Use English only.
+- Include clear sections for: Analysis, Reasoning, Recipe, and YouTube Guide.
+"""
+
+# ---------------------------------------------------------
+# 4. EXECUTION
+# ---------------------------------------------------------
+if st.button("🚀 Generate Logical Recipe"):
+    if not ingredients:
+        st.warning("Please enter ingredients.")
+    elif model is None:
+        st.error("Model initialization failed. Check your API key.")
+    else:
+        with st.spinner("Chef is reasoning through your situation..."):
+            try:
+                response = model.generate_content(prompt_template)
+                content = response.text
+                
+                st.markdown("---")
+                st.markdown(content)
+                
+                # ReAct: Logic to parse the query and create a clickable link
+                if "[YouTube Query:" in content:
+                    query_raw = content.split("[YouTube Query:")[1].split("]")[0].strip()
+                    encoded_query = urllib.parse.quote(query_raw)
+                    yt_url = f"https://www.youtube.com/results?search_query={encoded_query}"
+                    st.divider()
+                    st.info(f"📺 **Verified Video Search:** [{query_raw}]({yt_url})")
+                    
+            except Exception as e:
+                st.error(f"Error during generation: {e}")
