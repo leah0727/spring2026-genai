@@ -1,8 +1,16 @@
-mport streamlit as st
+import streamlit as st
 import google.generativeai as genai
 import urllib.parse
 import os
 
+## =========================================================
+# [PROJECT TECH STACK DEFINITION]
+# - Frontend: Streamlit (Low-code Web Framework)
+# - AI Model: Google Gemini 2.0 Flash (Multimodal LLM)
+# - Language: Python 3.10+
+# - API: Google Generative AI SDK
+# - Logic: CoT (Chain of Thought) & ReAct Prompting
+# ========================================================
 # ---------------------------------------------------------
 # 1. API CONFIGURATION
 # ---------------------------------------------------------
